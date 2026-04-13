@@ -1,0 +1,2 @@
+gradio==5.47.1
+sqlitecloud==0.0.84
