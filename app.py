@@ -40,4 +40,4 @@ with gr.Blocks(title="Data LOL Prediction") as demo:
         outputs=[df_final]
     )
 
-demo.launch()
+demo.launch(server_name="0.0.0.0", server_port=7000)
