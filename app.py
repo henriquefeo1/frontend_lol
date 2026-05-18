@@ -10,6 +10,10 @@ def get_projecoes(liga):
         liga = "lec"
     elif liga == "LCK":
         liga = 'lck'
+    elif liga == "LCS":
+        liga = 'lcs'
+    elif liga == "LPL":
+        liga = 'lpl'
 
     connection_string = "sqlitecloud://cw1kibdpdk.g4.sqlite.cloud:8860/dados_lol?apikey=kGwXx2fOHa43yDXhBsdeyAGbJBQXK0ljXRDtBEbieFs"
 
