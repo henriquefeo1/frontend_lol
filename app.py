@@ -32,7 +32,7 @@ with gr.Blocks(title="Data LOL Prediction") as demo:
         gr.Markdown("# 📊 Indicadores Gerais")
         
         with gr.Row():
-            liga = gr.Dropdown(label="Selecione a liga", choices=["LCK", "LEC"])
+            liga = gr.Dropdown(label="Selecione a liga", choices=["LCK", "LEC", "LPL", "LCS"])
             btn_processa = gr.Button("🚀 Prediction")
 
         with gr.Row():
