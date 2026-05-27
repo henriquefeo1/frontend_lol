@@ -8,7 +8,6 @@ st.set_page_config(page_title="Indicadores Gerais - Prediction", layout="wide")
 st.title("📊 Indicadores Gerais - Previsões de Jogos")
 
 # 1. Carregar os dados
-@st.cache_data
 def carregar_dados():
 
     connection_string = "sqlitecloud://cw1kibdpdk.g4.sqlite.cloud:8860/dados_lol?apikey=kGwXx2fOHa43yDXhBsdeyAGbJBQXK0ljXRDtBEbieFs"
