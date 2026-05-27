@@ -1,2 +1,2 @@
-gradio==5.47.1
+streamlit==1.57.0
 sqlitecloud==0.0.84
