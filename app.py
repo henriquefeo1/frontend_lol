@@ -1,47 +1,107 @@
-import gradio as gr
+import streamlit as st
 import pandas as pd
 import sqlitecloud
 
-pd.options.mode.chained_assignment = None
+# Configuração da página
+st.set_page_config(page_title="Indicadores Gerais - Prediction", layout="wide")
 
-def get_projecoes(liga):
+st.title("📊 Indicadores Gerais - Previsões de Jogos")
 
-    if liga == "LEC":
-        liga = "lec"
-    elif liga == "LCK":
-        liga = 'lck'
-    elif liga == "LCS":
-        liga = 'lcs'
-    elif liga == "LPL":
-        liga = 'lpl'
+# 1. Carregar os dados
+@st.cache_data
+def carregar_dados():
 
     connection_string = "sqlitecloud://cw1kibdpdk.g4.sqlite.cloud:8860/dados_lol?apikey=kGwXx2fOHa43yDXhBsdeyAGbJBQXK0ljXRDtBEbieFs"
 
     conn = sqlitecloud.connect(connection_string)
-    cursor = conn.cursor()
 
-    df_sql = pd.read_sql_query(f"SELECT * FROM base_pred where liga = '{liga}'", conn)
+    df_sql = pd.read_sql_query(f"SELECT * FROM base_pred", conn)
+    df_status = pd.read_sql_query(f"SELECT * FROM status_jogo where status = 'Feito'", conn)
+
+    df_sql = df_sql.merge(df_status, on = ['data', 'time_a', 'time_b'], how='left')
+    print(df_sql)
+
+    df_sql['status'] = df_sql['status'].fillna('Pendente')
+    print(df_sql)
+    conn.commit()
+    conn.close()    
 
     return df_sql
 
+# Inicializa o estado dos dados na sessão do usuário
+if 'df_jogos' not in st.session_state:
+    st.session_state.df_jogos = carregar_dados()
 
-with gr.Blocks(title="Data LOL Prediction") as demo:
-    
-    # --- Seção do Dashboard (Inicia oculta) ---
-    with gr.Column() as main_layout:
-        gr.Markdown("# 📊 Indicadores Gerais")
-        
-        with gr.Row():
-            liga = gr.Dropdown(label="Selecione a liga", choices=["LCK", "LEC", "LPL", "LCS"])
-            btn_processa = gr.Button("🚀 Prediction")
+# 2. Barra Lateral - Filtros
+st.sidebar.header("Filtros")
 
-        with gr.Row():
-            df_final = gr.DataFrame(label="Base Consolidada")
+# Filtro de Liga
+ligas_disponiveis = st.session_state.df_jogos['liga'].unique().tolist()
+liga_selecionada = st.sidebar.selectbox("Selecione a Liga", ["Todas"] + ligas_disponiveis)
 
-    btn_processa.click(
-        fn=get_projecoes,
-        inputs=[liga],
-        outputs=[df_final]
-    )
+# Filtro de Status (Feito / Pendente)
+status_selecionado = st.sidebar.multiselect(
+    "Status do Jogo", 
+    options=["Pendente", "Feito"], 
+    default=["Pendente", "Feito"]
+)
 
-demo.launch(server_name="0.0.0.0", server_port=7000)
+# Aplicar filtros ao DataFrame de exibição
+df_filtrado = st.session_state.df_jogos.copy()
+
+if liga_selecionada != "Todas":
+    df_filtrado = df_filtrado[df_filtrado['liga'] == liga_selecionada]
+
+df_filtrado = df_filtrado[df_filtrado['status'].isin(status_selecionado)]
+
+# 3. Exibição e Edição da Tabela
+st.write(f"Exibindo {len(df_filtrado)} jogos encontrados:")
+
+# Usamos o st.data_editor para permitir marcar os jogos como Feito/Pendente
+df_editado = st.data_editor(
+    df_filtrado,
+    column_config={
+        "status": st.column_config.SelectboxColumn(
+            "Sua Aposta",
+            help="Marque se o jogo já foi feito ou está pendente",
+            width="medium",
+            options=["Pendente", "Feito"],
+            required=True,
+        )
+    },
+    disabled=["data", "time_a", "time_b", "prob_0_rf", "prob_1_rf", "prob_0_reg", "prob_1_reg", "prob_0_svm", "prob_1_svm", "prob_0", "prob_1", "ganhador", "liga", "dt_atualizacao"], # Trava as outras colunas para não serem alteradas sem querer
+    hide_index=True,
+    use_container_width=True
+)
+
+# Salvar as alterações feitas de volta para o estado da sessão
+if st.button("Salvar Alterações de Status"):
+    st.session_state.df_jogos.update(df_editado)
+    connection_string = "sqlitecloud://cw1kibdpdk.g4.sqlite.cloud:8860/dados_lol?apikey=kGwXx2fOHa43yDXhBsdeyAGbJBQXK0ljXRDtBEbieFs"
+    conn = sqlitecloud.connect(connection_string)
+    df_status_2 = pd.read_sql_query(f"SELECT * FROM status_jogo", conn)
+
+    print(df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b']])
+
+    df_status_2 = pd.concat((df_status_2, df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b', 'status']])).drop_duplicates()
+
+    sql = """
+    Delete from status_jogo;
+    """
+
+    cursor = conn.cursor()
+    cursor.execute(sql)
+
+    for index, row in df_status_2.iterrows():
+    # Forma segura de inserir dados, evitando injeção de SQL
+        insert_sql = """
+        INSERT INTO status_jogo (data, time_a, time_b, status)
+        VALUES (?, ?, ?, ?);
+        """
+        values = (row['data'], row['time_a'], row['time_b'], 
+                row['status'])
+        cursor.execute(insert_sql, values)
+
+    conn.commit()
+    conn.close()
+    st.success("Status dos jogos atualizado com sucesso!")
