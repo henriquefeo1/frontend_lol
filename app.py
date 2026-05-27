@@ -3,9 +3,9 @@ import pandas as pd
 import sqlitecloud
 
 # Configuração da página
-st.set_page_config(page_title="Indicadores Gerais - Prediction", layout="wide")
+st.set_page_config(page_title="LOL Prediction", layout="wide", page_icon= 'https://www.rw-designer.com/icon-image/21516-256x256x32.png')
 
-st.title("📊 Indicadores Gerais - Previsões de Jogos")
+st.subheader("📊 Indicadores Gerais - LOL Prediction")
 
 # 1. Carregar os dados
 def carregar_dados():
@@ -18,10 +18,9 @@ def carregar_dados():
     df_status = pd.read_sql_query(f"SELECT * FROM status_jogo where status = 'Feito'", conn)
 
     df_sql = df_sql.merge(df_status, on = ['data', 'time_a', 'time_b'], how='left')
-    print(df_sql)
 
     df_sql['status'] = df_sql['status'].fillna('Pendente')
-    print(df_sql)
+    
     conn.commit()
     conn.close()    
 
@@ -35,7 +34,7 @@ if 'df_jogos' not in st.session_state:
 st.sidebar.header("Filtros")
 
 # Filtro de Liga
-ligas_disponiveis = st.session_state.df_jogos['liga'].unique().tolist()
+ligas_disponiveis = [liga.upper() for liga in st.session_state.df_jogos['liga'].unique().tolist()]
 liga_selecionada = st.sidebar.selectbox("Selecione a Liga", ["Todas"] + ligas_disponiveis)
 
 # Filtro de Status (Feito / Pendente)
@@ -49,7 +48,7 @@ status_selecionado = st.sidebar.multiselect(
 df_filtrado = st.session_state.df_jogos.copy()
 
 if liga_selecionada != "Todas":
-    df_filtrado = df_filtrado[df_filtrado['liga'] == liga_selecionada]
+    df_filtrado = df_filtrado[df_filtrado['liga'] == liga_selecionada.lower()]
 
 df_filtrado = df_filtrado[df_filtrado['status'].isin(status_selecionado)]
 
