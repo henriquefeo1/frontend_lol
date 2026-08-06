@@ -67,7 +67,7 @@ df_editado = st.data_editor(
             required=True,
         )
     },
-    disabled=["data", "time_a", "time_b", "prob_0_rf", "prob_1_rf", "prob_0_reg", "prob_1_reg", "prob_0_svm", "prob_1_svm", "prob_0", "prob_1", "ganhador", "liga", "dt_atualizacao"], # Trava as outras colunas para não serem alteradas sem querer
+    disabled=["data", "time_a", "time_b", "prob_0_cont", "prob_1_cont", "prob_0_parc", "prob_1_parc", "prob_0_compl", "prob_1_compl", "prob_0", "prob_1", "ganhador", "liga", "dt_atualizacao"], # Trava as outras colunas para não serem alteradas sem querer
     hide_index=True,
     use_container_width=True
 )
