@@ -74,15 +74,19 @@ df_editado = st.data_editor(
 
 # Salvar as alterações feitas de volta para o estado da sessão
 if st.button("Salvar Alterações de Status"):
+    print("Botão clicado inicio")
     st.session_state.df_jogos.update(df_editado)
     connection_string = "sqlitecloud://cw1kibdpdk.g4.sqlite.cloud:8860/dados_lol?apikey=kGwXx2fOHa43yDXhBsdeyAGbJBQXK0ljXRDtBEbieFs"
     conn = sqlitecloud.connect(connection_string)
     df_status_2 = pd.read_sql_query(f"SELECT * FROM status_jogo", conn)
 
+    print("Leu base de status_jogos clicado inicio")
+
     # print(df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b']])
 
     df_status_2 = pd.concat((df_status_2, df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b', 'status']])).drop_duplicates()
 
+    print("Deletando a base de status_jogos clicado inicio")
     sql = """
     Delete from status_jogo;
     """
