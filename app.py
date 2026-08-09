@@ -79,7 +79,7 @@ if st.button("Salvar Alterações de Status"):
     conn = sqlitecloud.connect(connection_string)
     df_status_2 = pd.read_sql_query(f"SELECT * FROM status_jogo", conn)
 
-    print(df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b']])
+    # print(df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b']])
 
     df_status_2 = pd.concat((df_status_2, df_editado.query("status == 'Feito'")[['data', 'time_a', 'time_b', 'status']])).drop_duplicates()
 
@@ -89,6 +89,7 @@ if st.button("Salvar Alterações de Status"):
 
     cursor = conn.cursor()
     cursor.execute(sql)
+    print("Dados deletados com sucesso")
 
     for index, row in df_status_2.iterrows():
     # Forma segura de inserir dados, evitando injeção de SQL
@@ -99,6 +100,8 @@ if st.button("Salvar Alterações de Status"):
         values = (row['data'], row['time_a'], row['time_b'], 
                 row['status'])
         cursor.execute(insert_sql, values)
+
+    print("Linhas ajustadas com sucesso")
 
     conn.commit()
     conn.close()
