@@ -74,6 +74,11 @@ def processa_performance(df_hist, df_palpites, data_ini, data_fim):
 
     # Agrupa por 'liga' e calcula a média do resultado
     df_performance = df_final.groupby('liga')['resultado'].mean().reset_index()
+
+    df_performance['liga'] = df_performance['liga'].str.upper()
+    df_performance['resultado'] = df_performance['resultado'].map('{:.0%}'.format)
+    df_performance.columns = ['Liga', 'Precisão']
+
     return df_performance
 
 
