@@ -54,7 +54,7 @@ def carregar_dados():
     return df_sql, df_novo
 
 # Alterado para agrupar também por Data e manter os valores como numéricos para o gráfico
-def processa_performance_diaria(df_hist, df_palpites, data_ini, data_fim):
+def processa_performance_acumulada(df_hist, df_palpites, data_ini, data_fim):
     df_palpites = df_palpites.rename(columns={"time_a": "Time1", "time_b": "Time2", 'ganhador': 'ganhador_predito'})
     
     # Filtra as datas usando dt.date para corresponder aos objetos retornados pelo slider
@@ -69,13 +69,29 @@ def processa_performance_diaria(df_hist, df_palpites, data_ini, data_fim):
     if df_final.empty:
         return pd.DataFrame(columns=['Data', 'liga', 'resultado'])
 
-    # Cria a coluna 'resultado' (1 se forem iguais, 0 se forem diferentes)
+    # Cria a coluna 'resultado' (1 se acertou, 0 se errou)
     df_final['resultado'] = (df_final['ganhador_real'] == df_final['ganhador_predito']).astype(int)
 
-    # Agrupa por 'Data' e 'liga' para plotar o histórico
-    df_performance = df_final.groupby(['Data', 'liga'])['resultado'].mean().reset_index()
+    # 1. Agrupa por Data e Liga pegando a SOMA dos acertos e o TOTAL de jogos no dia
+    df_performance = df_final.groupby(['Data', 'liga'])['resultado'].agg(
+        acertos='sum', 
+        total='count'
+    ).reset_index()
+
+    # 2. Ordena por liga e data para garantir que a acumulação ocorra na ordem cronológica
+    df_performance = df_performance.sort_values(by=['liga', 'Data'])
+
+    # 3. Calcula a soma acumulada de acertos e de total de jogos, por liga
+    df_performance['acertos_acum'] = df_performance.groupby('liga')['acertos'].cumsum()
+    df_performance['total_acum'] = df_performance.groupby('liga')['total'].cumsum()
+
+    # 4. A performance (resultado) será o total de acertos acumulados dividido pelo total de jogos até o dia
+    df_performance['resultado'] = df_performance['acertos_acum'] / df_performance['total_acum']
 
     df_performance['liga'] = df_performance['liga'].str.upper()
+
+    # Mantém apenas as colunas originais esperadas para não quebrar o resto do seu código
+    df_performance = df_performance[['Data', 'liga', 'resultado']]
 
     return df_performance
 
@@ -180,7 +196,7 @@ with tab2:
     )
 
     # Processa os dados reativamente baseando-se no slider
-    df_performance_atual = processa_performance_diaria(
+    df_performance_atual = processa_performance_acumulada(
         st.session_state.df_hist, 
         st.session_state.df_novo,
         data_ini=datas_selecionadas[0],
