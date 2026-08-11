@@ -34,9 +34,8 @@ def get_dados_hist():
 
     return df_sql
 
-
 # 1. Carregar os dados
-@st.cache_data(ttl=600) # Cache opcional para evitar recarregar DB o tempo todo
+@st.cache_data(ttl=600) 
 def carregar_dados():
     conn = sqlitecloud.connect(CONNECTION_STRING)
 
@@ -54,7 +53,8 @@ def carregar_dados():
 
     return df_sql, df_novo
 
-def processa_performance(df_hist, df_palpites, data_ini, data_fim):
+# Alterado para agrupar também por Data e manter os valores como numéricos para o gráfico
+def processa_performance_diaria(df_hist, df_palpites, data_ini, data_fim):
     df_palpites = df_palpites.rename(columns={"time_a": "Time1", "time_b": "Time2", 'ganhador': 'ganhador_predito'})
     
     # Filtra as datas usando dt.date para corresponder aos objetos retornados pelo slider
@@ -67,17 +67,15 @@ def processa_performance(df_hist, df_palpites, data_ini, data_fim):
     df_final = df_final.dropna(subset=['Win1'])
 
     if df_final.empty:
-        return pd.DataFrame(columns=['liga', 'resultado'])
+        return pd.DataFrame(columns=['Data', 'liga', 'resultado'])
 
     # Cria a coluna 'resultado' (1 se forem iguais, 0 se forem diferentes)
     df_final['resultado'] = (df_final['ganhador_real'] == df_final['ganhador_predito']).astype(int)
 
-    # Agrupa por 'liga' e calcula a média do resultado
-    df_performance = df_final.groupby('liga')['resultado'].mean().reset_index()
+    # Agrupa por 'Data' e 'liga' para plotar o histórico
+    df_performance = df_final.groupby(['Data', 'liga'])['resultado'].mean().reset_index()
 
     df_performance['liga'] = df_performance['liga'].str.upper()
-    df_performance['resultado'] = df_performance['resultado'].map('{:.0%}'.format)
-    df_performance.columns = ['Liga', 'Precisão']
 
     return df_performance
 
@@ -145,7 +143,6 @@ with tab1:
         conn = sqlitecloud.connect(CONNECTION_STRING)
         df_status_2 = pd.read_sql_query("SELECT * FROM status_jogo", conn)
 
-        # Usando drop_duplicates de forma correta para sobrescrever atualizações
         df_status_2 = pd.concat([
             df_status_2,
             df_editado.query("status == 'Feito'")[["data", "time_a", "time_b", "status"]]
@@ -166,16 +163,14 @@ with tab1:
         conn.close()
         st.success("Status dos jogos atualizado com sucesso!")
         
-        # Limpa o cache para garantir leitura atualizada na próxima reinicialização
         carregar_dados.clear() 
 
 # ==========================================
-# JANELA 2: NOVA EXIBIÇÃO DE DATAFRAME
+# JANELA 2: GRÁFICO DE PERFORMANCE
 # ==========================================
 with tab2:
-    st.markdown("### 📋 Histórico Geral")
+    st.markdown("### 📈 Histórico de Precisão por Liga")
 
-    # A simples captura do output atualiza a página automaticamente na seleção 
     datas_selecionadas = st.slider(
         "Selecione o intervalo de datas:",
         min_value=min_data,
@@ -185,16 +180,25 @@ with tab2:
     )
 
     # Processa os dados reativamente baseando-se no slider
-    df_performance_atual = processa_performance(
+    df_performance_atual = processa_performance_diaria(
         st.session_state.df_hist, 
         st.session_state.df_novo,
         data_ini=datas_selecionadas[0],
         data_fim=datas_selecionadas[1]
     )
 
-    # Exibição do novo DataFrame
-    st.dataframe(
-        df_performance_atual, 
-        use_container_width=False, 
-        hide_index=True
-    )
+    if not df_performance_atual.empty:
+        # Prepara a tabela para o gráfico de linhas: X = Data, Y = Resultado, Linhas = Liga
+        df_grafico = df_performance_atual.pivot(index="Data", columns="liga", values="resultado")
+        
+        # Multiplica por 100 para visualizar a performance em base percentual (ex: 85%)
+        df_grafico = df_grafico * 100
+        
+        # Exibe o gráfico 
+        st.line_chart(
+            df_grafico, 
+            y_label="Precisão Média (%)",
+            x_label="Data"
+        )
+    else:
+        st.warning("Sem dados suficientes para gerar o gráfico neste período.")
