@@ -207,6 +207,15 @@ with tab2:
         # Prepara a tabela para o gráfico de linhas: X = Data, Y = Resultado, Linhas = Liga
         df_grafico = df_performance_atual.pivot(index="Data", columns="liga", values="resultado")
         
+        # 1. Cria um intervalo contínuo de datas, do primeiro ao último dia do gráfico
+        data_inicial_grafico = df_grafico.index.min()
+        data_final_grafico = df_grafico.index.max()
+        dias_completos = pd.date_range(start=data_inicial_grafico, end=data_final_grafico)
+        
+        # 2. Reindexa o DataFrame para ter todos os dias. 
+        # O método ffill() (forward fill) carrega o último valor conhecido para os dias vazios.
+        df_grafico = df_grafico.reindex(dias_completos).ffill()
+        
         # Multiplica por 100 para visualizar a performance em base percentual (ex: 85%)
         df_grafico = df_grafico * 100
         
