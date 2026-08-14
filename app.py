@@ -2,6 +2,7 @@ import pandas as pd
 import sqlitecloud
 import streamlit as st
 import numpy as np
+from datetime import date
 
 # Configuração da página
 st.set_page_config(
@@ -103,8 +104,8 @@ if "df_jogos" not in st.session_state or "df_novo" not in st.session_state:
 
 # Define limites de data independente do recarregamento do layout
 min_data = st.session_state.df_novo['Data'].min().date()
-max_data = st.session_state.df_novo['Data'].max().date()
-
+# max_data = st.session_state.df_novo['Data'].max().date()
+max_data = date.today()
 
 # 2. Criando as Janelas (Abas)
 tab1, tab2 = st.tabs(["🎮 Gerenciador de Apostas", "📈 Visualizador de Dados"])
